@@ -51,7 +51,7 @@ namespace AzureFunctionsTimes.Test.Test
         public async void DeleteTime_Should_Return_200()
         {
 
-            //arrange
+            // Arrange
             MockCloudTableTimes mockTimes = new MockCloudTableTimes(new Uri("http://127.0.0.1:10002/devstoreaccount1/reports"));
             Time timeRequest = TestFactory.GetTimeRequest();
             TimeEntity timeEntity = TestFactory.GetTimeEntity();
@@ -69,14 +69,14 @@ namespace AzureFunctionsTimes.Test.Test
         [Fact]
         public async void GetAllTimes_Should_Return_200()
         {
-            //arrange
+            // Arrange
             MockCloudTableTimes mockTimes = new MockCloudTableTimes(new Uri("http://127.0.0.1:10002/devstoreaccount1/reports"));
             DefaultHttpRequest request = TestFactory.CreateHttpRequest();
 
-            //act
+            // Act
             IActionResult response = await TimeApi.GetAllTimes(request, mockTimes, logger);
 
-            //assert
+            // Assert
             OkObjectResult result = (OkObjectResult)response;
             Assert.Equal(StatusCodes.Status200OK, result.StatusCode);
         }
@@ -85,16 +85,16 @@ namespace AzureFunctionsTimes.Test.Test
         public void GetTimeById_Should_Return_200()
         {
 
-            //arrange
+            // Arrange
             MockCloudTableTimes mockTimes = new MockCloudTableTimes(new Uri("http://127.0.0.1:10002/devstoreaccount1/reports"));
             TimeEntity timeEntity = TestFactory.GetTimeEntity();
             Guid timeId = Guid.NewGuid();
             DefaultHttpRequest request = TestFactory.CreateHttpRequest();
 
-            //act
+            // Act
             IActionResult response = TimeApi.GetTimeById(request, timeEntity, timeId.ToString(), logger);
 
-            //assert
+            // Assert
             OkObjectResult result = (OkObjectResult)response;
             Assert.Equal(StatusCodes.Status200OK, result.StatusCode);
         }

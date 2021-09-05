@@ -60,6 +60,14 @@ namespace AzureFunctionsTimes.Test.Helpers
             };
         }
 
+        public static DefaultHttpRequest CreateHttpRequest(string date)
+        {
+            return new DefaultHttpRequest(new DefaultHttpContext())
+            {
+                Path = $"/{date}"
+            };
+        }
+
         public static DefaultHttpRequest CreateHttpRequest(Time timeRequest)
         {
             string request = JsonConvert.SerializeObject(timeRequest);
