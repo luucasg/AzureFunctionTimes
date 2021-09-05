@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using System;
 using System.IO;
 using AzureFunctionsTimes.Common.Models;
+using System.Collections.Generic;
 
 namespace AzureFunctionsTimes.Test.Helpers
 {
@@ -92,6 +93,11 @@ namespace AzureFunctionsTimes.Test.Helpers
                 logger = NullLoggerFactory.Instance.CreateLogger("Null Logger");
             }
             return logger;
+        }
+
+        public static List<TimeEntity> GetAllTimesRequest()
+        {
+            return new List<TimeEntity>();
         }
     }
 }

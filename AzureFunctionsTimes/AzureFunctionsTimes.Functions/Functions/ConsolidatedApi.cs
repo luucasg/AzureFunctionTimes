@@ -26,11 +26,12 @@ namespace AzureFunctionsTimes.Functions.Functions
 
             string notConsolidatedFilter = TableQuery.GenerateFilterConditionForBool("IsConsolidated", QueryComparisons.Equal, false);
             TableQuery<TimeEntity> query = new TableQuery<TimeEntity>().Where(notConsolidatedFilter);
-            TableQuerySegment<TimeEntity> timesWithoudConsolidated = await timeTable.ExecuteQuerySegmentedAsync(query, null);
+            TableQuerySegment<TimeEntity> timesWithoutConsolidated = await timeTable.ExecuteQuerySegmentedAsync(query, null);
             int totalAdd = 0;
             int totalUpdate = 0;
-            var groupedTimes = (from t in timesWithoudConsolidated group t by t.EmployeeId).ToList();
-            foreach (var groupTime in groupedTimes)
+
+            List<IGrouping<int, TimeEntity>> groupedTimes = (from t in timesWithoutConsolidated group t by t.EmployeeId).ToList();
+            foreach (IGrouping<int, TimeEntity> groupTime in groupedTimes)
             {
                 TimeSpan difference;
                 double totalMinutes = 0;
@@ -48,7 +49,7 @@ namespace AzureFunctionsTimes.Functions.Functions
                             totalMinutes += difference.TotalMinutes;
                             TableQuery<ConsolidatedEntity> consolidatedQuery = new TableQuery<ConsolidatedEntity>();
                             TableQuerySegment<ConsolidatedEntity> allConsolidated = await consolidatedTable.ExecuteQuerySegmentedAsync(consolidatedQuery, null);
-                            var findConsolidatedResult = allConsolidated.Where(x => x.EmployeeId == auxTimes[i].EmployeeId);
+                            IEnumerable<ConsolidatedEntity> findConsolidatedResult = allConsolidated.Where(x => x.EmployeeId == auxTimes[i].EmployeeId);
                             if (findConsolidatedResult == null || findConsolidatedResult.Count() == 0)
                             {
                                 ConsolidatedEntity consolidatedEntity = new ConsolidatedEntity
@@ -63,16 +64,18 @@ namespace AzureFunctionsTimes.Functions.Functions
                                 TableOperation addConsolidatedOperation = TableOperation.Insert(consolidatedEntity);
                                 await consolidatedTable.ExecuteAsync(addConsolidatedOperation);
                                 totalAdd++;
+                                totalMinutes = 0;
                             }
                             else
                             {
                                 TableOperation findOp = TableOperation.Retrieve<ConsolidatedEntity>("CONSOLIDATED", findConsolidatedResult.First().RowKey);
                                 TableResult findRes = await consolidatedTable.ExecuteAsync(findOp);
                                 ConsolidatedEntity consolidatedEntity = (ConsolidatedEntity)findRes.Result;
-                                consolidatedEntity.WorkedMinutes += findConsolidatedResult.First().WorkedMinutes;
+                                consolidatedEntity.WorkedMinutes += (int)totalMinutes;
                                 TableOperation addConsolidatedOperation = TableOperation.Replace(consolidatedEntity);
                                 await consolidatedTable.ExecuteAsync(addConsolidatedOperation);
                                 totalUpdate++;
+                                totalMinutes = 0;
                             }
                         }
                     }
