@@ -36,7 +36,7 @@ namespace AzureFunctionsTimes.Test.Helpers
             ConstructorInfo constructor = typeof(TableQuerySegment<ConsolidatedEntity>)
                    .GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic)
                    .FirstOrDefault(c => c.GetParameters().Count() == 1);
-            return await Task.FromResult(constructor.Invoke(new object[] { TestFactory.GetConsolidatedEntity() }) as TableQuerySegment<ConsolidatedEntity>);
+            return await Task.FromResult(constructor.Invoke(new object[] { TestFactory.GetConsolidatedRequest() }) as TableQuerySegment<ConsolidatedEntity>);
         }
     }
 }
