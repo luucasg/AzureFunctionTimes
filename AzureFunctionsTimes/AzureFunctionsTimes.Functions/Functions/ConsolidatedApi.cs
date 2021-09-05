@@ -55,7 +55,7 @@ namespace AzureFunctionsTimes.Functions.Functions
                                 ConsolidatedEntity consolidatedEntity = new ConsolidatedEntity
                                 {
                                     EmployeeId = auxTimes[i].EmployeeId,
-                                    Date = DateTime.Today,
+                                    Date = auxTimes[i].Date,
                                     WorkedMinutes = (int)totalMinutes,
                                     ETag = "*",
                                     PartitionKey = "CONSOLIDATED",
@@ -72,6 +72,7 @@ namespace AzureFunctionsTimes.Functions.Functions
                                 TableResult findRes = await consolidatedTable.ExecuteAsync(findOp);
                                 ConsolidatedEntity consolidatedEntity = (ConsolidatedEntity)findRes.Result;
                                 consolidatedEntity.WorkedMinutes += (int)totalMinutes;
+                                consolidatedEntity.Date = findConsolidatedResult.First().Date;
                                 TableOperation addConsolidatedOperation = TableOperation.Replace(consolidatedEntity);
                                 await consolidatedTable.ExecuteAsync(addConsolidatedOperation);
                                 totalUpdate++;
@@ -107,8 +108,8 @@ namespace AzureFunctionsTimes.Functions.Functions
             await timeTable.ExecuteAsync(addOperation);
         }
 
-        [FunctionName(nameof(GetConsolidateByDate))]
-        public static async Task<IActionResult> GetConsolidateByDate(
+        [FunctionName(nameof(GetConsolidatedByDate))]
+        public static async Task<IActionResult> GetConsolidatedByDate(
            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "consolidate/{parameterDate}")] HttpRequest req,
            [Table("consolidated", Connection = "AzureWebJobsStorage")] CloudTable consolidatedTable,
            string parameterDate,
@@ -122,8 +123,6 @@ namespace AzureFunctionsTimes.Functions.Functions
             TableQuery<ConsolidatedEntity> consolidatedQuery = new TableQuery<ConsolidatedEntity>();
             TableQuerySegment<ConsolidatedEntity> allConsolidated = await consolidatedTable.ExecuteQuerySegmentedAsync(consolidatedQuery, null);
             List<ConsolidatedEntity> consolidatedInRange = new List<ConsolidatedEntity>();
-
-            int i = allConsolidated.Count();
 
             foreach (ConsolidatedEntity consolidated in allConsolidated)
             {

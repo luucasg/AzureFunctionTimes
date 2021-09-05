@@ -28,6 +28,20 @@ namespace AzureFunctionsTimes.Test.Helpers
             };
         }
 
+        public static ConsolidatedEntity GetConsolidatedEntity()
+        {
+            return new ConsolidatedEntity
+            {
+                ETag = "*",
+                PartitionKey = "CONSOLIDATED",
+                RowKey = Guid.NewGuid().ToString(),
+                Date = DateTime.UtcNow,
+                EmployeeId = 1,
+                Timestamp = DateTime.UtcNow,
+                WorkedMinutes = 20
+            };
+        }
+
         public static DefaultHttpRequest CreateHttpRequest(Guid timeId, Time timeRequest)
         {
             string request = JsonConvert.SerializeObject(timeRequest);
@@ -98,6 +112,11 @@ namespace AzureFunctionsTimes.Test.Helpers
         public static List<TimeEntity> GetAllTimesRequest()
         {
             return new List<TimeEntity>();
+        }
+
+        public static List<ConsolidatedEntity> GetConsolidatedRequest()
+        {
+            return new List<ConsolidatedEntity>();
         }
     }
 }
