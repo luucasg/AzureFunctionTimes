@@ -107,85 +107,41 @@ namespace AzureFunctionsTimes.Functions.Functions
             await timeTable.ExecuteAsync(addOperation);
         }
 
-        [FunctionName(nameof(ConsolidatedByDate))]
-        public static async Task<IActionResult> ConsolidatedByDate(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "consolidated/{dateFilter}")] HttpRequest req,
-            [Table("time", Connection = "AzureWebJobsStorage")] CloudTable timeTable,
-            [Table("consolidated", Connection = "AzureWebJobsStorage")] CloudTable consolidatedTable,
-            DateTime dateFilter,
-            ILogger log)
+        [FunctionName(nameof(GetConsolidateByDate))]
+        public static async Task<IActionResult> GetConsolidateByDate(
+           [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "consolidate/{parameterDate}")] HttpRequest req,
+           [Table("consolidated", Connection = "AzureWebJobsStorage")] CloudTable consolidatedTable,
+           string parameterDate,
+           ILogger log)
         {
-            log.LogInformation($"Get consolidated received in the date: {dateFilter}.");
+            log.LogInformation($"Getting all the consolidates for day {parameterDate}.");
 
-            string notConsolidatedFilter = TableQuery.GenerateFilterConditionForBool("IsConsolidated", QueryComparisons.Equal, false);
-            string dateStorage = TableQuery.GenerateFilterConditionForDate("Date", QueryComparisons.GreaterThanOrEqual, dateFilter);
-            string combinedFilters = TableQuery.CombineFilters(notConsolidatedFilter, TableOperators.And, dateStorage);
-            TableQuery<TimeEntity> query = new TableQuery<TimeEntity>().Where(combinedFilters);
-            TableQuerySegment<TimeEntity> timesWithoudConsolidated = await timeTable.ExecuteQuerySegmentedAsync(query, null);
-            int totalAdd = 0;
-            int totalUpdate = 0;
-            var groupedTimes = (from t in timesWithoudConsolidated group t by t.EmployeeId).ToList();
-            foreach (var groupTime in groupedTimes)
+            DateTime date = DateTime.Parse(parameterDate);
+            DateTime finalDate = DateTime.Parse(parameterDate + " 23:59 ");
+
+            TableQuery<ConsolidatedEntity> consolidatedQuery = new TableQuery<ConsolidatedEntity>();
+            TableQuerySegment<ConsolidatedEntity> allConsolidated = await consolidatedTable.ExecuteQuerySegmentedAsync(consolidatedQuery, null);
+            List<ConsolidatedEntity> consolidatedInRange = new List<ConsolidatedEntity>();
+
+            int i = allConsolidated.Count();
+
+            foreach (ConsolidatedEntity consolidated in allConsolidated)
             {
-                TimeSpan difference;
-                double totalMinutes = 0;
-                List<TimeEntity> orderedTimes = groupTime.OrderBy(x => x.Date).ToList();
-                int pair = orderedTimes.Count % 2 == 0 ? orderedTimes.Count : orderedTimes.Count - 1;
-                TimeEntity[] auxTimes = orderedTimes.ToArray();
-                try
+                if (consolidated.Date >= date && consolidated.Date <= finalDate)
                 {
-                    for (int i = 0; i < pair; i++)
-                    {
-                        await SetIsConsolidatedAsync(auxTimes[i].RowKey, timeTable);
-                        if (i % 2 != 0 && auxTimes.Length > 1)
-                        {
-                            difference = auxTimes[i].Date - auxTimes[i - 1].Date;
-                            totalMinutes += difference.TotalMinutes;
-                            TableQuery<ConsolidatedEntity> consolidatedQuery = new TableQuery<ConsolidatedEntity>();
-                            TableQuerySegment<ConsolidatedEntity> allConsolidated = await consolidatedTable.ExecuteQuerySegmentedAsync(consolidatedQuery, null);
-                            var findConsolidatedResult = allConsolidated.Where(x => x.EmployeeId == auxTimes[i].EmployeeId);
-                            if (findConsolidatedResult == null || findConsolidatedResult.Count() == 0)
-                            {
-                                ConsolidatedEntity consolidatedEntity = new ConsolidatedEntity
-                                {
-                                    EmployeeId = auxTimes[i].EmployeeId,
-                                    Date = DateTime.Today,
-                                    WorkedMinutes = (int)totalMinutes,
-                                    ETag = "*",
-                                    PartitionKey = "CONSOLIDATED",
-                                    RowKey = auxTimes[i].RowKey
-                                };
-                                TableOperation addConsolidatedOperation = TableOperation.Insert(consolidatedEntity);
-                                await consolidatedTable.ExecuteAsync(addConsolidatedOperation);
-                                totalAdd++;
-                            }
-                            else
-                            {
-                                TableOperation findOp = TableOperation.Retrieve<ConsolidatedEntity>("CONSOLIDATED", findConsolidatedResult.First().RowKey);
-                                TableResult findRes = await consolidatedTable.ExecuteAsync(findOp);
-                                ConsolidatedEntity consolidatedEntity = (ConsolidatedEntity)findRes.Result;
-                                consolidatedEntity.WorkedMinutes += findConsolidatedResult.First().WorkedMinutes;
-                                TableOperation addConsolidatedOperation = TableOperation.Replace(consolidatedEntity);
-                                await consolidatedTable.ExecuteAsync(addConsolidatedOperation);
-                                totalUpdate++;
-                            }
-                        }
-                    }
-                }
-                catch (Exception e)
-                {
-                    string errorMessage = e.Message;
-                    throw;
+                    consolidatedInRange.Add(consolidated);
                 }
             }
-            string message = $"Get consolidates by date: {dateFilter}, completed.";
+
+            string message = consolidatedInRange.Count() > 0 ? 
+                $"Consolidates for date: {parameterDate} retrieved" : "There aren't consolidates to show in this date.";
             log.LogInformation(message);
 
             return new OkObjectResult(new Response
             {
                 IsSuccess = true,
                 Message = message,
-                Result = null
+                Result = consolidatedInRange
             });
         }
     }

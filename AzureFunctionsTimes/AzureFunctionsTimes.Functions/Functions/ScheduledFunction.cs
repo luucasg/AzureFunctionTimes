@@ -65,7 +65,8 @@ namespace AzureFunctionsTimes.Functions.Functions
                                 TableOperation findOp = TableOperation.Retrieve<ConsolidatedEntity>("CONSOLIDATED", findConsolidatedResult.First().RowKey);
                                 TableResult findRes = await consolidatedTable.ExecuteAsync(findOp);
                                 ConsolidatedEntity consolidatedEntity = (ConsolidatedEntity)findRes.Result;
-                                consolidatedEntity.WorkedMinutes += findConsolidatedResult.First().WorkedMinutes;
+                                consolidatedEntity.WorkedMinutes += (int)totalMinutes;
+                                consolidatedEntity.Date = findConsolidatedResult.First().Date;
                                 TableOperation addConsolidatedOperation = TableOperation.Replace(consolidatedEntity);
                                 await consolidatedTable.ExecuteAsync(addConsolidatedOperation);
                                 totalUpdate++;
